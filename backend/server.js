@@ -13,7 +13,8 @@ app.use(express.static('public'));
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 // ENDPOINT 1: Retrieve Data from your Supabase Database
-app.get('/api/my-fruits', async (req, res) => {
+// Change this line in your server.js
+app.get('/api/my-db-fruits', async (req, res) => { // Added '-db-' to match app.js
   const { data, error } = await supabase.from('fruits').select('*');
   if (error) return res.status(500).json(error);
   res.json(data);
