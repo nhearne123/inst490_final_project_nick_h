@@ -1,13 +1,3 @@
-// ✅ Calls YOUR backend (Express), which calls Fruityvice + Supabase.
-// External API endpoints (Fruityvice through your server):
-//   GET /api/fruits
-//   GET /api/fruits/:name
-//   GET /api/fruits-low-sugar
-//
-// Database endpoints (Supabase):
-//   GET /api/favorites
-//   POST /api/favorites
-//   DELETE /api/favorites/:id
 
 const FRUITS_BASE = "/api/fruits";
 const ALL_URL = FRUITS_BASE;
@@ -44,9 +34,8 @@ if (favoriteForm) favoriteForm.addEventListener("submit", saveFavoriteFromForm);
 if (loadFavoritesBtn) loadFavoritesBtn.addEventListener("click", loadFavorites);
 if (quickSaveBtn) quickSaveBtn.addEventListener("click", quickSaveFavorite);
 
-// -----------------------------
-// Fetch #1: GET ALL FRUITS
-// -----------------------------
+
+// GET ALL FRUITS
 async function loadAllFruits() {
   setStatus("Loading fruits...", false);
 
@@ -83,9 +72,8 @@ async function loadAllFruits() {
   }
 }
 
-// -----------------------------
+
 // Fetch #2: GET ONE FRUIT BY NAME
-// -----------------------------
 async function viewSelectedFruit() {
   const name = select?.value;
 
@@ -119,9 +107,8 @@ async function viewSelectedFruit() {
   }
 }
 
-// -----------------------------
+
 // Favorites: POST /api/favorites
-// -----------------------------
 async function saveFavoriteFromForm(e) {
   e.preventDefault();
 
@@ -174,9 +161,8 @@ async function postFavorite(fruit_name, notes) {
   }
 }
 
-// -----------------------------
+
 // Favorites: GET /api/favorites
-// -----------------------------
 async function loadFavorites() {
   if (!favoritesList) return;
 
@@ -225,9 +211,8 @@ async function loadFavorites() {
   }
 }
 
-// -----------------------------
-// Favorites: DELETE /api/favorites/:id
-// -----------------------------
+
+// Favorites: DELETE 
 async function deleteFavorite(id) {
   setFavMsg("Deleting...", false);
 
@@ -247,9 +232,8 @@ async function deleteFavorite(id) {
   }
 }
 
-// -----------------------------
+
 // UI HELPERS
-// -----------------------------
 function setStatus(msg, isError) {
   if (!statusMsg) return;
   statusMsg.textContent = msg;
@@ -307,7 +291,7 @@ function buildSwiper(fruits) {
     });
   });
 
-  // (Re)create swiper
+  // swiper
   if (swiperInstance) swiperInstance.destroy(true, true);
 
   swiperInstance = new Swiper("#fruitSwiper", {

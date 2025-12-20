@@ -24,9 +24,6 @@ app.get("/", (req, res) => {
   res.sendFile("public/index.html", { root: __dirname });
 });
 
-/* -------------------------
-   EXTERNAL API (Fruityvice)
-   ------------------------- */
 
 // Fetch #1: All fruits
 app.get("/api/fruits", async (req, res) => {
@@ -51,7 +48,7 @@ app.get("/api/fruits/:name", async (req, res) => {
   }
 });
 
-// Fetch #3: Simple “manipulated” endpoint (example: top 10 lowest sugar)
+// Fetch #3: Simple endpoint
 app.get("/api/fruits-low-sugar", async (req, res) => {
   try {
     const r = await fetch(`${FRUITS_BASE}/all`);
@@ -69,9 +66,9 @@ app.get("/api/fruits-low-sugar", async (req, res) => {
   }
 });
 
-/* -------------------------
-   SUPABASE (Your database)
-   ------------------------- */
+/* --------
+   SUPABASE 
+   -------- */
 
 // GET favorites from Supabase
 app.get("/api/favorites", async (req, res) => {
