@@ -1,5 +1,5 @@
-# inst490_final_project_nick_h
-# Fruit Finder + Favorites (INST490 Final Project)
+# inst377_final_project_nick_h
+# Fruit Finder + Favorites (INST377 Final Project)
 
 ## Project Overview
 
