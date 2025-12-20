@@ -1,10 +1,16 @@
-// ✅ UPDATED: Call YOUR backend (not Fruityvice directly)
-// Backend should provide:
+// ✅ Calls YOUR backend (Express), which calls Fruityvice + Supabase.
+// External API endpoints (Fruityvice through your server):
 //   GET /api/fruits
 //   GET /api/fruits/:name
-//   PUT /api/fruits
-const BASE = "/api/fruits";
-const ALL_URL = BASE;
+//   GET /api/fruits-low-sugar
+//
+// Database endpoints (Supabase):
+//   GET /api/favorites
+//   POST /api/favorites
+//   DELETE /api/favorites/:id
+
+const FRUITS_BASE = "/api/fruits";
+const ALL_URL = FRUITS_BASE;
 
 const button = document.getElementById("loadFruits");
 const select = document.getElementById("fruitSelect");
@@ -14,18 +20,29 @@ const statusMsg = document.getElementById("statusMsg");
 const details = document.getElementById("fruitDetails");
 const swiperWrapper = document.getElementById("swiperWrapper");
 
-const addForm = document.getElementById("addFruitForm");
-const addMsg = document.getElementById("addMsg");
-
 let allFruits = [];
 let swiperInstance = null;
 
 let chartInstance = null;
 const chartCanvas = document.getElementById("nutritionChart");
 
+let currentFruit = null;
+
+// Favorites UI
+const quickSaveBtn = document.getElementById("quickSaveBtn");
+const favoriteForm = document.getElementById("favoriteForm");
+const favFruitName = document.getElementById("favFruitName");
+const favNotes = document.getElementById("favNotes");
+const favMsg = document.getElementById("favMsg");
+const loadFavoritesBtn = document.getElementById("loadFavoritesBtn");
+const favoritesList = document.getElementById("favoritesList");
+
 if (button) button.addEventListener("click", loadAllFruits);
 if (viewBtn) viewBtn.addEventListener("click", viewSelectedFruit);
-if (addForm) addForm.addEventListener("submit", submitNewFruit);
+
+if (favoriteForm) favoriteForm.addEventListener("submit", saveFavoriteFromForm);
+if (loadFavoritesBtn) loadFavoritesBtn.addEventListener("click", loadFavorites);
+if (quickSaveBtn) quickSaveBtn.addEventListener("click", quickSaveFavorite);
 
 // -----------------------------
 // Fetch #1: GET ALL FRUITS
@@ -80,13 +97,20 @@ async function viewSelectedFruit() {
   setStatus(`Loading ${name}...`, false);
 
   try {
-    // ✅ THIS is the “single fruit” fetch line
-    const res = await fetch(`${BASE}/${encodeURIComponent(name)}`);
+    const res = await fetch(`${FRUITS_BASE}/${encodeURIComponent(name)}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const fruit = await res.json();
+    currentFruit = fruit;
+
     renderDetails(fruit);
     renderChart(fruit);
+
+    // Auto-fill favorite name
+    if (favFruitName) favFruitName.value = fruit.name || "";
+
+    // Enable quick save
+    if (quickSaveBtn) quickSaveBtn.disabled = false;
 
     setStatus(`Showing: ${fruit.name} ✅`, false);
   } catch (err) {
@@ -96,51 +120,130 @@ async function viewSelectedFruit() {
 }
 
 // -----------------------------
-// Fetch #3: PUT SUGGEST A FRUIT
+// Favorites: POST /api/favorites
 // -----------------------------
-async function submitNewFruit(e) {
+async function saveFavoriteFromForm(e) {
   e.preventDefault();
-  if (addMsg) addMsg.textContent = "Submitting...";
 
-  const payload = {
-    name: getVal("newName"),
-    genus: getVal("newGenus") || "Unknown",
-    family: getVal("newFamily") || "Unknown",
-    order: getVal("newOrder") || "Unknown",
-    nutritions: {
-      calories: numVal("newCalories"),
-      sugar: numVal("newSugar"),
-      carbohydrates: numVal("newCarbs"),
-      protein: numVal("newProtein"),
-      fat: numVal("newFat"),
-    },
-  };
+  const name = (favFruitName?.value || "").trim();
+  const notes = (favNotes?.value || "").trim();
 
-  if (!payload.name) {
-    if (addMsg) addMsg.textContent = "Fruit name is required.";
+  if (!name) {
+    setFavMsg("Fruit name is required.", true);
     return;
   }
 
+  await postFavorite(name, notes);
+}
+
+async function quickSaveFavorite() {
+  const name = currentFruit?.name || (select?.value || "").trim();
+  const notes = (favNotes?.value || "").trim();
+
+  if (!name) {
+    setFavMsg("Pick a fruit first.", true);
+    return;
+  }
+
+  await postFavorite(name, notes);
+}
+
+async function postFavorite(fruit_name, notes) {
+  setFavMsg("Saving favorite...", false);
+
   try {
-    // ✅ Send to YOUR backend (which should forward to Fruityvice)
-    const res = await fetch(BASE, {
-      method: "PUT",
+    const res = await fetch("/api/favorites", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ fruit_name, notes }),
     });
 
-    // Some APIs return text, some JSON; handle both safely
     const text = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status} — ${text.slice(0, 160)}`);
 
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status} — ${text.slice(0, 120)}`);
-    }
+    setFavMsg(`Saved "${fruit_name}" ⭐`, false);
 
-    if (addMsg) addMsg.textContent = "Submitted ✅ (API may require admin approval)";
-    if (addForm) addForm.reset();
+    // Refresh list so they SEE it saved
+    await loadFavorites();
+
+    // Clear notes (keep name filled)
+    if (favNotes) favNotes.value = "";
   } catch (err) {
     console.error(err);
-    if (addMsg) addMsg.textContent = `Submit failed: ${err.message}`;
+    setFavMsg(`Save failed: ${err.message}`, true);
+  }
+}
+
+// -----------------------------
+// Favorites: GET /api/favorites
+// -----------------------------
+async function loadFavorites() {
+  if (!favoritesList) return;
+
+  favoritesList.innerHTML = `<p class="muted">Loading favorites...</p>`;
+
+  try {
+    const res = await fetch("/api/favorites");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    if (!Array.isArray(data)) throw new Error("Favorites API returned non-array");
+
+    if (data.length === 0) {
+      favoritesList.innerHTML = `<p class="muted">No favorites saved yet.</p>`;
+      return;
+    }
+
+    favoritesList.innerHTML = data
+      .map((row) => {
+        const name = escapeHtml(row.fruit_name || "—");
+        const notes = escapeHtml(row.notes || "");
+        const id = row.id;
+
+        return `
+          <div class="details-card" style="margin-bottom: 10px;">
+            <p><strong>🍓 ${name}</strong></p>
+            ${notes ? `<p class="muted">${notes}</p>` : `<p class="muted">(no notes)</p>`}
+            <button class="mini-btn" data-del="${id}">Delete</button>
+          </div>
+        `;
+      })
+      .join("");
+
+    // Hook delete buttons
+    favoritesList.querySelectorAll("button[data-del]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.del;
+        await deleteFavorite(id);
+      });
+    });
+  } catch (err) {
+    console.error(err);
+    favoritesList.innerHTML = `<p class="status error">Failed to load favorites: ${escapeHtml(
+      err.message
+    )}</p>`;
+  }
+}
+
+// -----------------------------
+// Favorites: DELETE /api/favorites/:id
+// -----------------------------
+async function deleteFavorite(id) {
+  setFavMsg("Deleting...", false);
+
+  try {
+    const res = await fetch(`/api/favorites/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+
+    const text = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status} — ${text.slice(0, 160)}`);
+
+    setFavMsg("Deleted ✅", false);
+    await loadFavorites();
+  } catch (err) {
+    console.error(err);
+    setFavMsg(`Delete failed: ${err.message}`, true);
   }
 }
 
@@ -153,15 +256,21 @@ function setStatus(msg, isError) {
   statusMsg.className = isError ? "status error" : "status";
 }
 
+function setFavMsg(msg, isError) {
+  if (!favMsg) return;
+  favMsg.textContent = msg;
+  favMsg.className = isError ? "status error" : "status";
+}
+
 function renderDetails(fruit) {
   if (!details) return;
 
   const n = fruit.nutritions || {};
   details.innerHTML = `
-    <h4>${fruit.name}</h4>
-    <p><strong>Genus:</strong> ${fruit.genus || "—"}</p>
-    <p><strong>Family:</strong> ${fruit.family || "—"}</p>
-    <p><strong>Order:</strong> ${fruit.order || "—"}</p>
+    <h4>${escapeHtml(fruit.name || "—")}</h4>
+    <p><strong>Genus:</strong> ${escapeHtml(fruit.genus || "—")}</p>
+    <p><strong>Family:</strong> ${escapeHtml(fruit.family || "—")}</p>
+    <p><strong>Order:</strong> ${escapeHtml(fruit.order || "—")}</p>
     <hr />
     <p><strong>Calories:</strong> ${n.calories ?? "—"}</p>
     <p><strong>Sugar:</strong> ${n.sugar ?? "—"}</p>
@@ -181,9 +290,9 @@ function buildSwiper(fruits) {
     slide.className = "swiper-slide";
     slide.innerHTML = `
       <div class="slide-card">
-        <h4>${f.name}</h4>
-        <p class="muted">${f.family || ""}</p>
-        <button class="mini-btn" data-fruit="${f.name}">View</button>
+        <h4>${escapeHtml(f.name || "—")}</h4>
+        <p class="muted">${escapeHtml(f.family || "")}</p>
+        <button class="mini-btn" data-fruit="${escapeHtml(f.name || "")}">View</button>
       </div>
     `;
     swiperWrapper.appendChild(slide);
@@ -242,12 +351,11 @@ function renderChart(fruit) {
   });
 }
 
-function getVal(id) {
-  const el = document.getElementById(id);
-  return (el?.value || "").trim();
-}
-
-function numVal(id) {
-  const v = Number(getVal(id));
-  return Number.isFinite(v) ? v : 0;
+function escapeHtml(s) {
+  return String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
