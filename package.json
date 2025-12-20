@@ -1,10 +1,29 @@
 {
-    "name": "fruit-project-root",
-    "version": "1.0.0",
-    "dependencies": {
-      "@supabase/supabase-js": "^2.0.0",
-      "cors": "^2.8.5",
-      "dotenv": "^16.0.0",
-      "express": "^4.18.0"
-    }
+  "name": "inst490_final_project_nick_h",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/nhearne123/inst490_final_project_nick_h#readme",
+  "bugs": {
+    "url": "https://github.com/nhearne123/inst490_final_project_nick_h/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nhearne123/inst490_final_project_nick_h.git"
+  },
+  "license": "ISC",
+  "author": "Nick",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon -e '*'",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.81.1",
+    "body-parser": "^2.2.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "nodemon": "^3.1.11",
+    "usa-state-validator": "^1.0.6"
   }
+}
